@@ -1,33 +1,40 @@
 #include <iostream>
-#include <unistd.h>
+#include <sys/unistd.h>
 #include <fstream>
-#include <signal.h>
+#include <sys/signal.h>
+#include <string.h>
 using namespace std;
 
-void handler(int i) {
-    cout << i;
-    exit(0);
-}
 
 int main(int argc, char* argv[]) {
     ofstream output_file;
     char buff;
     sigset_t signals;
-    int s = 0, signal_to_react, my_signal;
+    int s, signal_to_react, my_signal;
     int read_from_pipe_des = *argv[1];
     bool rdy;
+    bool is_even = strcmp(argv[3], "e") == 0 ? true : false;
     
     output_file.open(argv[2], std::ifstream::out);
-    
     sigemptyset(&signals);
     sigaddset(&signals, SIGUSR1);
     sigaddset(&signals, SIGUSR2);
-    sigprocmask(SIG_UNBLOCK, &signals, NULL);
-    signal(SIGUSR1, handler);
+    sigaddset(&signals, SIGQUIT);
+    sigprocmask(SIG_BLOCK, &signals, NULL);
     
-    cout << "INIT" << endl;
+//     if(is_even) sigaddset(&signals, SIGUSR2);
+//     else sigaddset(&signals, SIGUSR1);
+    
+    
+    if(is_even) kill(getppid(), SIGUSR1);
+    else kill(getppid(), SIGUSR2);
     sigwait(&signals, &s);
-    cout << "END" << endl;
+    
+    //
+    cout << "Cought initial signal: " << s << " from ";
+    if(is_even) cout << "SIGUSR1" << endl;
+    else cout << "SIGUSR2" << endl;
+    //
     
     /*
     if (sigwait(&signals, &s)) {
@@ -36,11 +43,7 @@ int main(int argc, char* argv[]) {
     } else cout << "fdsaf" << endl;
     */
     
-    /*
-    
-    cout << s << endl;
-    
-    if (s == SIGUSR1) {
+    if (is_even) {
         cout << 1 << endl;
         my_signal = SIGUSR1;
         signal_to_react = SIGUSR2;
@@ -51,12 +54,13 @@ int main(int argc, char* argv[]) {
         signal_to_react = SIGUSR1;
         rdy = false;
     }
-
+    /*
     sigaddset(&signals, SIGQUIT);
+    sigprocmask(SIG_BLOCK, &signals, NULL);
     
     while(true) {
         if(rdy) rdy = false;
-        else sigwait(&signals, &signal_to_react);
+        else sigwait(&signals, &s);
         
         int temp = read(read_from_pipe_des, &buff, 1);
         
@@ -65,12 +69,10 @@ int main(int argc, char* argv[]) {
             exit(-1);
         } else if(temp == 0 && s != SIGQUIT) {
             while(read(read_from_pipe_des, &buff, 1) == 0)
-                usleep(10000);
+                usleep(100);
         } else if(temp == 0 && s == SIGQUIT) {
             cout << "[Pipe is empty and writer is dead. Terminating...]" << endl;
-            close(read_from_pipe_des);
-            output_file.close();
-            exit(0);
+            break;
         }
         
         output_file << buff;
@@ -78,6 +80,10 @@ int main(int argc, char* argv[]) {
         kill(0, my_signal);
     }
     
+    kill(0, my_signal);
     */
+    close(read_from_pipe_des);
+    output_file.close();
+    exit(0);
     
 }
