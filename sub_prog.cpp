@@ -4,6 +4,10 @@
 #include <signal.h>
 using namespace std;
 
+void handler(int i) {
+    cout << i;
+    exit(0);
+}
 
 int main(int argc, char* argv[]) {
     ofstream output_file;
@@ -19,13 +23,11 @@ int main(int argc, char* argv[]) {
     sigaddset(&signals, SIGUSR1);
     sigaddset(&signals, SIGUSR2);
     sigprocmask(SIG_UNBLOCK, &signals, NULL);
+    signal(SIGUSR1, handler);
     
-    cout << "INITsadfdsfdsfdsgfdsgf" << endl;
-    
-    do {sigwait(&signals, &s); cout << "memsdgfffffffffffddsffdsg";}
-    while(s != SIGUSR1 || s!= SIGUSR2);
-    
-    cout << "fsdfsddsgwaefsfsg234213424" << endl;
+    cout << "INIT" << endl;
+    sigwait(&signals, &s);
+    cout << "END" << endl;
     
     /*
     if (sigwait(&signals, &s)) {
@@ -34,7 +36,7 @@ int main(int argc, char* argv[]) {
     } else cout << "fdsaf" << endl;
     */
     
-    
+    /*
     
     cout << s << endl;
     
@@ -76,6 +78,6 @@ int main(int argc, char* argv[]) {
         kill(0, my_signal);
     }
     
-    
+    */
     
 }
