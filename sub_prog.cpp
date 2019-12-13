@@ -5,85 +5,77 @@
 #include <string.h>
 using namespace std;
 
+bool end_is_reached = false;
+
+void end_register(int i) {
+    end_is_reached = true;
+}
+
 
 int main(int argc, char* argv[]) {
     ofstream output_file;
-    char buff;
-    sigset_t signals;
-    int s, signal_to_react, my_signal;
+    char buff = 'a';
+    sigset_t my_signal_set, sibling_signal_set, end_of_pipe_set;
+    int s = 0, sibling_signal, my_signal;
     int read_from_pipe_des = *argv[1];
-    bool rdy;
+    bool rdy_to_go;
     bool is_even = strcmp(argv[3], "e") == 0 ? true : false;
     
     output_file.open(argv[2], std::ifstream::out);
-    sigemptyset(&signals);
-    sigaddset(&signals, SIGUSR1);
-    sigaddset(&signals, SIGUSR2);
-    sigaddset(&signals, SIGQUIT);
-    sigprocmask(SIG_BLOCK, &signals, NULL);
     
-//     if(is_even) sigaddset(&signals, SIGUSR2);
-//     else sigaddset(&signals, SIGUSR1);
+    if (is_even) { my_signal = SIGUSR1; sibling_signal = SIGUSR2; rdy_to_go = true; } // for even
+    else { my_signal = SIGUSR2; sibling_signal = SIGUSR1; rdy_to_go = true; } // for odd
     
+    sigemptyset(&my_signal_set);
+    sigemptyset(&sibling_signal_set);
+    sigemptyset(&end_of_pipe_set);
     
-    if(is_even) kill(getppid(), SIGUSR1);
-    else kill(getppid(), SIGUSR2);
-    sigwait(&signals, &s);
+    sigaddset(&my_signal_set, my_signal);
+    sigaddset(&sibling_signal_set, sibling_signal);
+    sigaddset(&end_of_pipe_set, SIGQUIT);
     
-    //
-    cout << "Cought initial signal: " << s << " from ";
-    if(is_even) cout << "SIGUSR1" << endl;
-    else cout << "SIGUSR2" << endl;
-    //
+    signal(SIGQUIT, end_register);
     
-    /*
-    if (sigwait(&signals, &s)) {
-        cout << "[Unexpected error]" << endl;
-        exit(-1);
-    } else cout << "fdsaf" << endl;
-    */
+    sigprocmask(SIG_BLOCK, &sibling_signal_set, NULL);
+    sigprocmask(SIG_BLOCK, &my_signal_set, NULL);
+    sigprocmask(SIG_UNBLOCK, &end_of_pipe_set, NULL);
+
     
-    if (is_even) {
-        cout << 1 << endl;
-        my_signal = SIGUSR1;
-        signal_to_react = SIGUSR2;
-        rdy = true;
-    } else {
-        cout << 2 << endl;
-        my_signal = SIGUSR2;
-        signal_to_react = SIGUSR1;
-        rdy = false;
-    }
-    /*
-    sigaddset(&signals, SIGQUIT);
-    sigprocmask(SIG_BLOCK, &signals, NULL);
+    kill(getppid(), my_signal);
+    sigwait(&my_signal_set, &s);
+    
+    cout << "1[" << my_signal << "==" << s << "] " << end_is_reached << endl;
     
     while(true) {
-        if(rdy) rdy = false;
-        else sigwait(&signals, &s);
+        if(rdy_to_go) rdy_to_go = false;
+        else {cout << my_signal << " is waiting" << endl; sigwait(&my_signal_set, &s); cout << "not now..." << endl;}
         
-        int temp = read(read_from_pipe_des, &buff, 1);
         
-        if(temp == -1) {
-            cout << "[Unexpected error]" << endl;
-            exit(-1);
-        } else if(temp == 0 && s != SIGQUIT) {
-            while(read(read_from_pipe_des, &buff, 1) == 0)
-                usleep(100);
-        } else if(temp == 0 && s == SIGQUIT) {
+        cout << "2[" << my_signal << "==" << s << "] " << end_is_reached << " " << buff << " " << endl;
+        
+        if (!read(read_from_pipe_des, &buff, 1) && end_is_reached)
+        {
             cout << "[Pipe is empty and writer is dead. Terminating...]" << endl;
+            close(read_from_pipe_des);
             break;
         }
+        else if (!end_is_reached) {
+            for (int i = 0; read(read_from_pipe_des, &buff, 1) == 0 && i < 5; i++)
+                usleep(100000);
+        }
+        
+        if(buff == '\0') break;
         
         output_file << buff;
-        cout << buff;
-        kill(0, my_signal);
+        cout << buff << endl;
+        kill(0, sibling_signal);
+        
+        
     }
     
-    kill(0, my_signal);
-    */
-    close(read_from_pipe_des);
+    kill(0, sibling_signal);
     output_file.close();
-    exit(0);
+    cout << endl << endl << "CLOSING TIME!" << endl;
     
+    exit(EXIT_SUCCESS);
 }
