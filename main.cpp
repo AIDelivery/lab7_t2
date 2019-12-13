@@ -64,7 +64,7 @@ int main(int argc, char* argv[]) {
     cout << "[PID1: SIGNAL SEND]" << endl;
     kill(pid2, SIGUSR2);
     cout << "[PID2: SIGNAL SEND]" << endl;
-    /*
+    
     for(int i = 0; !file_to_send.eof(); i++) {
         getline(file_to_send, buff);
         size_t sz = sizeof(buff);
@@ -78,7 +78,7 @@ int main(int argc, char* argv[]) {
     cout << endl << endl << "[Waiting for successors...]" << endl;
     kill(pid1, SIGQUIT);
     kill(pid2, SIGQUIT);
-    */
+    
     
     waitpid(pid1, &s, 0);
     waitpid(pid2, &s, 0);
