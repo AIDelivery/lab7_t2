@@ -62,7 +62,7 @@ int main(int argc, char* argv[]) {
         kill(0, sibling_signal);
     }
 
-    kill(0, sibling_signal);
+    // kill(0, sibling_signal);
     output_file.close();
     close(read_from_pipe_des);
     exit(EXIT_SUCCESS);
